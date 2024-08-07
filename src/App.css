@@ -1,38 +1,75 @@
-.App {
-  text-align: center;
+a.active span {
+  color: #4eac6d;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+a.active ~ div {
+  display: block;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.ant-modal-root .ant-modal-content {
+  padding: 0;
+  overflow: hidden;
 }
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.chat.active > div {
+  background-color: #76d997;
+}
+/* .chat.active > div > :last-child {
   color: white;
+} */
+.ant-notification-notice-with-icon {
+  position: relative;
+}
+.ant-notification-notice-icon {
+  position: absolute;
+  top: 11px;
+}
+.ant-notification-notice-description {
+  white-space: nowrap;
+  overflow: hidden; 
+  text-overflow: ellipsis; 
 }
 
-.App-link {
-  color: #61dafb;
+.emojiPiker {
+  position: absolute !important;
+  bottom: 50px;
+  left: 0px;
+  z-index: 9999;
+  height: 380px !important;
+}
+/* Thay đổi màu nền của checkbox khi được chọn */
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #4EAC6D;
+  border-color: #4EAC6D;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Thay đổi màu của dấu check */
+.ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: #ffffff;
+}
+
+/* Thay đổi màu viền của checkbox khi hover */
+.ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.ant-checkbox:hover .ant-checkbox-inner {
+  border-color: #4EAC6D !important;
+}
+
+/* Thay đổi màu nền của checkbox khi được chọn và hover */
+.ant-checkbox-wrapper:hover .ant-checkbox-checked .ant-checkbox-inner,
+.ant-checkbox:hover .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #4EAC6D !important;
+  border-color: #4EAC6D !important;
+}
+.custom-button.ant-btn {
+  color: white !important;
+  width: 100% !important;
+  padding: 19px 16px !important;
+  background-color: #4caf50 !important; /* bg-primary */
+  border-radius: 5px !important;
+  transition: background-color 0.3s ease !important; /* Thêm transition cho hiệu ứng hover */
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.custom-button.ant-btn:hover {
+  background-color: #59c37c !important;
 }
