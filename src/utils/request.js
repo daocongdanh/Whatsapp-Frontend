@@ -1,4 +1,4 @@
-const API_DOMAIN = "https://whatsapp-iyzm.onrender.com/";
+const API_DOMAIN = "http://localhost:8080/";
 
 export const get = async (path) => {
   const response = await fetch(API_DOMAIN + path);

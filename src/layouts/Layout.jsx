@@ -56,7 +56,7 @@ export default function Layout(){
   useEffect(() => {
     var userId = parseInt(localStorage.getItem("id"))
     // Tạo kết nối SockJS
-    const socket = new SockJS('https://whatsapp-iyzm.onrender.com/chat');
+    const socket = new SockJS('http://localhost:8080/chat');
     // Tạo STOMP client từ kết nối SockJS
     const client = Stomp.over(() => socket);
     // Phải truyền object có 'type'

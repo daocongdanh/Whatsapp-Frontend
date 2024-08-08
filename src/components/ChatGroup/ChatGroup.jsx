@@ -182,7 +182,11 @@ export default function ChatGroup(){
     }
     else if(key === '2'){
       var fetchApi = async () => {
-        var result = await removeMember(id, userId);
+        var data = {
+          userId: userId,
+          userRemove: null
+        }
+        var result = await removeMember(id, data);
         console.log(result);
         if(result.status === 204){
           // messageApi.open({
@@ -207,7 +211,8 @@ export default function ChatGroup(){
     var members = Array.from(document.getElementsByName("checkbox")).filter(item => (item.checked === true && item.disabled === false)).map(item => parseInt(item.id));
     if(members.length > 0){
       var addMember = {
-        users: members
+        users: members,
+        userAdd: userId
       }
       stompClient.send(`/app/add-members/${id}`, {}, JSON.stringify(addMember));
     }
@@ -216,25 +221,27 @@ export default function ChatGroup(){
       setReload(reload => !reload);
     },100)
   }
-  const handleRemove = (userId) => {
-    stompClient.send(`/app/remove-member/${id}/${userId}`, {});
-    setTimeout(() => {
-      setReload(reload => !reload);
-    },100)
-  }
-  const handleTransfer = (userId) => {
+  const handleRemove = (uid) => {
     var data = {
-      userId : userId
+      userId: uid,
+      userRemove: userId
     }
-    var fetchApi = async () => {
-      var result = await transferTeamLeader(id, data);
-    }
-    fetchApi();
-    setTimeout(() => {
-      setReload(reload => !reload);
-    },100)
+    stompClient.send(`/app/remove-member/${id}`, {}, JSON.stringify(data));
   }
-  console.log(messages);
+  const handleTransfer = (uid) => {
+    var data = {
+      userId : uid
+    }
+    stompClient.send(`/app/transfer-team-leader/${id}`, {}, JSON.stringify(data));
+    handleCancelList();
+  }
+  useEffect(() => {
+    if (stompClient && stompClient.connected) {
+      stompClient.subscribe(`/topic/notification-group/${userId}`, function (message) {
+        setReload(reload => !reload);
+      });
+    }
+  }, [stompClient]);
   return (
     <>
       {contextHolder}
@@ -289,65 +296,135 @@ export default function ChatGroup(){
         </div>
         <div className="flex-1 overflow-y-auto px-[24px] pt-[24px]" ref={messageRef}>
           <ul className="">
-            {messages && messages.map((item) => (
-              item.isSystem === true ? (
-                <div className="flex justify-center mb-[24px]">
-                  <div className="bg-white rounded-[20px] px-[10px] py-[7px] flex items-center">
-                    <img src={item.user.avatar} alt="" className="w-[30px] h-[30px] object-cover rounded-full mr-[10px]" />
-                    <div className="flex items-center justify-between" dangerouslySetInnerHTML={{ __html: item.content }} />
-                  </div>
-                </div>
-              ) : (
-                item.user.id !== user.id ? (
-                  <li key={item.id} className="flex justify-start mb-[24px]">
-                    <div className="inline-flex">
-                      <div className="w-[28px] h-[28px] rounded-[50%] overflow-hidden mr-[20px]">
-                        <img src={item.user.avatar} className="w-full h-full" alt="" />
+            {messages && messages.map((item) => {
+              var userA = "";
+              var text = "";
+              var userB = "";
+              if(item.type === 'USER_JOIN'){
+                text = item.content;
+                if(item.relatedUser === null){ // Bạn đã tham gia nhóm || userA đã tham gia nhóm
+                  userA = item.user.id === userId ? "Bạn" : item.user.fullName;
+                }
+                else{
+                  if(item.user.id !== userId && item.relatedUser.id !== userId){ // userA được userB thêm vào nhóm
+                    userA = item.user.fullName;
+                    userB = item.relatedUser.fullName;
+                  }
+                  else if(item.user.id === userId){ // Bạn được userB thêm vào nhóm
+                    userA = "Bạn"
+                    userB = item.relatedUser.fullName;
+                  }
+                  else if(item.relatedUser.id === userId){ // userA được bạn thêm vào nhóm
+                    userA = item.user.fullName;
+                    userB = "Bạn";
+                  }
+                }
+              }
+              else if(item.type === 'USER_LEAVE'){
+                text = item.content;
+                if(item.relatedUser === null){ // userA đã rời gia nhóm
+                  userA =  item.user.fullName;
+                }
+                else{
+                  if(item.user.id !== userId && item.relatedUser.id !== userId){ // userA được userB xóa khỏi nhóm
+                    userA = item.user.fullName;
+                    userB = item.relatedUser.fullName;
+                  }
+                  else if(item.relatedUser.id === userId){ // userA được bạn xóa khỏi nhóm
+                    userA = item.user.fullName;
+                    userB = "Bạn";
+                  }
+                }
+              }
+              else if(item.type === 'TRANSFER_ADMIN'){
+                text = item.content; 
+                // Bạn đã được đã được bổ nhiệm thành trưởng nhóm || user đã được bổ nhiệm thành trưởng nhóm
+                userA = item.user.id === userId ? "Bạn" : item.user.fullName;
+              }
+              return (
+                <>
+                  {item.type === 'TEXT' && (
+                    item.user.id !== user.id ? (
+                      <li key={item.id} className="flex justify-start mb-[24px]">
+                        <div className="inline-flex">
+                          <div className="w-[28px] h-[28px] rounded-[50%] overflow-hidden mr-[20px]">
+                            <img src={item.user.avatar} className="w-full h-full" alt="" />
+                          </div>
+                          {item.isImage === true ? (
+                            <div className="">
+                              {chat.group === true && (
+                                <p className="text-[#495057BF] text-[12px] font-[500] mb-[5px]">{item.user.fullName}</p>
+                              )}
+                              <div className="w-[150px] h-[150px] overflow-hidden rounded-[10px]">
+                                <Image src={item.content} width={150} height={150} className="object-cover"/>
+                                {/* <img src={item.content} alt="hinhanh" className="w-full h-full object-cover" /> */}
+                              </div>
+                              <div className="text-[#495057BF] text-[12px] font-[500] mt-[5px] inline-block px-[10px] py-[5px] rounded-[10px] bg-gray-300">{item.timeStamp}</div>
+                            </div>
+                          ) : (
+                            <div className="px-[20px] py-[12px] bg-white rounded-[5px] flex-1 text-[15px] text-secondary">
+                              {chat.group === true && (
+                                <p className="text-[#495057BF] text-[12px] font-[500] mb-[5px]">{item.user.fullName}</p>
+                              )}
+                              {item.content}
+                              <p className="text-[#495057BF] text-[12px] font-[500] mt-[5px]">{item.timeStamp}</p>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    ) : (
+                      <li key={item.id} className="flex justify-end mb-[24px]">
+                        <div className="inline-flex flex-row-reverse">
+                          {item.isImage === true ? (
+                            <div className="">
+                              <div className="w-[150px] h-[150px] overflow-hidden rounded-[10px]">
+                                <Image src={item.content} width={150} height={150} className="object-cover"/>
+                              </div>
+                              <div className="text-[#495057BF] text-[12px] font-[500] mt-[5px] inline-block px-[10px] py-[5px] rounded-[10px] bg-gray-300">{item.timeStamp}</div>
+                            </div>
+                          ) : (
+                            <div className="px-[20px] py-[12px] bg-[#CCE2D3] rounded-[5px] flex-1 text-[15px] text-secondary">
+                              {item.content}
+                              <p className="text-[#495057BF] text-[12px] font-[500] mt-[5px]">{item.timeStamp}</p>
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  )}
+                  {(item.type === 'USER_JOIN' || item.type === 'USER_LEAVE') && (
+                    item.relatedUser === null ? (
+                      <div className="flex justify-center mb-[16px]">
+                        <div className="bg-white rounded-[20px] px-[10px] py-[7px] flex items-center">
+                          <img src={item.user.avatar} alt="" className="w-[30px] h-[30px] object-cover rounded-full mr-[10px]" />
+                          <span className="text-secondary text-[13px] font-[500] mr-[5px]">{userA}</span>
+                          <span className="text-gray-400 text-[13px]">{text}</span>
+                        </div>
                       </div>
-                      {item.isImage === true ? (
-                        <div className="">
-                          {chat.group === true && (
-                            <p className="text-[#495057BF] text-[12px] font-[500] mb-[5px]">{item.user.fullName}</p>
-                          )}
-                          <div className="w-[150px] h-[150px] overflow-hidden rounded-[10px]">
-                            <Image src={item.content} width={150} height={150} className="object-cover"/>
-                            {/* <img src={item.content} alt="hinhanh" className="w-full h-full object-cover" /> */}
-                          </div>
-                          <div className="text-[#495057BF] text-[12px] font-[500] mt-[5px] inline-block px-[10px] py-[5px] rounded-[10px] bg-gray-300">{item.timeStamp}</div>
+                    ) : (
+                      <div className="flex justify-center mb-[16px]">
+                        <div className="bg-white rounded-[20px] px-[10px] py-[7px] flex items-center">
+                          <img src={item.user.avatar} alt="" className="w-[30px] h-[30px] object-cover rounded-full mr-[10px]" />
+                          <span className="text-secondary text-[13px] font-[500] mr-[5px]">{userA}</span>
+                          <span className="text-gray-400 text-[13px] mr-[5px]">được</span>
+                          <span className="text-secondary text-[13px] font-[500] mr-[5px]">{userB}</span>
+                          <span className="text-gray-400 text-[13px]">{text}</span>
                         </div>
-                      ) : (
-                        <div className="px-[20px] py-[12px] bg-white rounded-[5px] flex-1 text-[15px] text-secondary">
-                          {chat.group === true && (
-                            <p className="text-[#495057BF] text-[12px] font-[500] mb-[5px]">{item.user.fullName}</p>
-                          )}
-                          {item.content}
-                          <p className="text-[#495057BF] text-[12px] font-[500] mt-[5px]">{item.timeStamp}</p>
-                        </div>
-                      )}
+                      </div>
+                    )
+                  )}
+                  {item.type === 'TRANSFER_ADMIN' && (
+                    <div className="flex justify-center mb-[16px]">
+                      <div className="bg-white rounded-[20px] px-[10px] py-[7px] flex items-center">
+                        <FaAward className="text-[20px] mr-[5px] text-primary" />
+                        <span className="text-secondary text-[13px] font-[500] mr-[5px]">{userA}</span>
+                        <span className="text-gray-400 text-[13px]">{text}</span>
+                      </div>
                     </div>
-                  </li>
-                ) : (
-                  <li key={item.id} className="flex justify-end mb-[24px]">
-                    <div className="inline-flex flex-row-reverse">
-                      {item.isImage === true ? (
-                        <div className="">
-                          <div className="w-[150px] h-[150px] overflow-hidden rounded-[10px]">
-                            <Image src={item.content} width={150} height={150} className="object-cover"/>
-                          </div>
-                          <div className="text-[#495057BF] text-[12px] font-[500] mt-[5px] inline-block px-[10px] py-[5px] rounded-[10px] bg-gray-300">{item.timeStamp}</div>
-                        </div>
-                      ) : (
-                        <div className="px-[20px] py-[12px] bg-[#CCE2D3] rounded-[5px] flex-1 text-[15px] text-secondary">
-                          {item.content}
-                          <p className="text-[#495057BF] text-[12px] font-[500] mt-[5px]">{item.timeStamp}</p>
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                )
+                  )}
+                </>
               )
-              
-            ))}
+            })}
           </ul>
         </div>
         <div className="p-[24px] backdrop-blur-[7px] sticky bottom-0 left-0 w-full border-t border-[#ddd] z-[999]">

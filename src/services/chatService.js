@@ -1,4 +1,4 @@
-import { del, get, put } from "../utils/request"
+import { get, put } from "../utils/request"
 
 export const getChatById = async (id) => {
   const result = await get(`chats/${id}`);
@@ -10,7 +10,7 @@ export const transferTeamLeader = async (id, data) => {
   return result;
 }
 
-export const removeMember = async (id, userId) => {
-  const result = await del(`chats/remove-member/${id}/${userId}`);
+export const removeMember = async (id, data) => {
+  const result = await put(`chats/remove-member/${id}`, data);
   return result;
 }
